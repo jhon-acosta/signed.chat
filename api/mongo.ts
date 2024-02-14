@@ -1,10 +1,6 @@
 import mongoose from "mongoose";
 
-const configs = {
-  MONGO_URI:
-    process.env.MONGO_URI ||
-    "mongodb+srv://jecacosta:oxO4Iej2XsIYuBkn@signedchatdev.lxaqgul.mongodb.net/signedchat?retryWrites=true&w=majority",
-};
+const configs = { MONGO_URI: process.env.NEXT_PUBLIC_MONGO_URI! };
 
 let isConnected = false;
 
