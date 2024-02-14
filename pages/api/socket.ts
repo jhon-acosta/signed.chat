@@ -2,6 +2,8 @@ import { Server } from "socket.io";
 import type { NextApiRequest } from "next";
 import { NextApiResponseWithSocket } from "@/types/api.socket";
 
+const socketURL = `${process.env.NEXT_PUBLIC_SOCKET_URL}:3001`;
+
 const socketServer = (PORT = 3001) => {
   const io = new Server({
     path: "/api/socket",
@@ -23,8 +25,6 @@ const socketServer = (PORT = 3001) => {
   return io;
 };
 
-// test
-
 export default function SocketHandler(
   _req: NextApiRequest,
   res: NextApiResponseWithSocket
@@ -33,7 +33,7 @@ export default function SocketHandler(
     res.status(200).json({
       success: true,
       message: "Socket is already running",
-      socket: `:3001`,
+      socket: socketURL,
     });
     return;
   }
@@ -43,6 +43,6 @@ export default function SocketHandler(
   res.status(201).json({
     success: true,
     message: "Socket is started",
-    socket: `:3001`,
+    socket: socketURL,
   });
 }
