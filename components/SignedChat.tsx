@@ -6,7 +6,7 @@ import { io } from "socket.io-client";
 import { SendOutlined } from "@ant-design/icons";
 
 export const socketClient = () => {
-  const socket = io(`${process.env.NEXT_PUBLIC_SOCKET_URL}:3001`, {
+  const socket = io(`:3001`, {
     path: "/api/socket",
     addTrailingSlash: false,
     reconnectionDelay: 1000,

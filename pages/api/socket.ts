@@ -2,7 +2,7 @@ import { Server } from "socket.io";
 import type { NextApiRequest } from "next";
 import { NextApiResponseWithSocket } from "@/types/api.socket";
 
-const socketURL = `${process.env.NEXT_PUBLIC_SOCKET_URL}:3001`;
+const socketURL = `:3001`;
 
 const socketServer = (PORT = 3001) => {
   const io = new Server({
