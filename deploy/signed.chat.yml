@@ -1,8 +1,8 @@
 version: "3"
 
 services:
-  signedchat:
-    image: signedchat
+  app:
+    image: ghcr.io/jhon-acosta/signed.chat:latest
     ports:
       - 3000:3000
       - 3001:3001
