@@ -1,7 +1,7 @@
 import axios from "axios";
 import { useState } from "react";
-import { User } from "@/api/models/User";
 import { SendOutlined } from "@ant-design/icons";
+import { UsuarioChat } from "@/types/UsuariosChat";
 import { Avatar, Button, Card, Form, Input, Select, message } from "antd";
 
 const avatars = [
@@ -28,17 +28,15 @@ const avatars = [
 ];
 
 const CreateUser = () => {
-  const [form] = Form.useForm<User>();
+  const [form] = Form.useForm<UsuarioChat>();
   const [isLoading, setIsLoading] = useState(false);
 
-  const onSubmit = async (values: User) => {
+  const onSubmit = async (values: UsuarioChat) => {
     setIsLoading(true);
     try {
-      const response = await axios.post("/api/users", values);
-      localStorage.setItem("currentUser", JSON.stringify(response.data.data));
-      message.success(
-        `Usuario ${response.data.data.username} creado correctamente`
-      );
+      const response = await axios.post("/api/usuarios-chat", values);
+      localStorage.setItem("currentUser", JSON.stringify(response.data));
+      message.success(`Usuario ${response.data.username} creado correctamente`);
     } catch (error) {
       console.error(error);
     } finally {

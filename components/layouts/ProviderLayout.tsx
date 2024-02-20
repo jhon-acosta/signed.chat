@@ -1,26 +1,22 @@
 "use client";
 import axios from "axios";
+import getIO from "@/lib/socket-io";
 import CreateUser from "../CreateUser";
 import Sider from "antd/es/layout/Sider";
-import { User } from "@/api/models/User";
+import { UsuarioChat } from "@/types/UsuariosChat";
 import { Menu, Layout, Avatar, Badge } from "antd";
-import { socketClient } from "../SignedChat";
 import { ItemType, MenuItemType } from "antd/es/menu/hooks/useItems";
 import { FC, useMemo, useState, useEffect, PropsWithChildren } from "react";
 
-interface UserDocument extends User {
-  _id: string;
-}
-
 const ProviderLayout: FC<PropsWithChildren> = (props) => {
-  const [usersOnline, setUsersOnline] = useState<UserDocument[]>([]);
+  const [usersOnline, setUsersOnline] = useState<UsuarioChat[]>([]);
   const [receiverUser, setReceiverUser] = useState<string | null>(null);
-  const [currentUser, setCurrentUser] = useState<UserDocument | null>(null);
+  const [currentUser, setCurrentUser] = useState<UsuarioChat | null>(null);
 
   const getUserLocalStorage = () => {
     const currentUser = localStorage.getItem("currentUser");
     setCurrentUser(
-      !currentUser ? null : (JSON.parse(currentUser || "{}") as UserDocument)
+      !currentUser ? null : (JSON.parse(currentUser || "{}") as UsuarioChat)
     );
   };
 
@@ -55,8 +51,8 @@ const ProviderLayout: FC<PropsWithChildren> = (props) => {
     getUserLocalStorage();
     const getUsersOnline = async () => {
       try {
-        const response = await axios.get<{ data: UserDocument[] }>(
-          "/api/users"
+        const response = await axios.get<{ data: UsuarioChat[] }>(
+          "/api/usuarios-chat"
         );
         setUsersOnline(response.data?.data || []);
       } catch (error) {
@@ -66,8 +62,8 @@ const ProviderLayout: FC<PropsWithChildren> = (props) => {
 
     getUsersOnline();
 
-    const socket = socketClient();
-    socket.on("getAllUsers", (users: UserDocument[]) => {
+    const io = getIO();
+    io.on("getAllUsers", (users: UsuarioChat[]) => {
       setUsersOnline(users);
       setTimeout(() => {
         getUserLocalStorage();
@@ -75,7 +71,7 @@ const ProviderLayout: FC<PropsWithChildren> = (props) => {
     });
 
     return () => {
-      socket.disconnect();
+      io.disconnect();
     };
   }, []);
 
