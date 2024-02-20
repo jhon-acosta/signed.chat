@@ -1,6 +1,6 @@
 import { io as socketIO } from "socket.io-client";
 
-const socketURL = `${process.env.NEXT_PUBLIC_SOCKET_URL}:3001`;
+const socketURL = `${process.env.NEXT_PUBLIC_SOCKET_URL}:3002`;
 
 export default function getIO() {
   const io = socketIO(socketURL, {
