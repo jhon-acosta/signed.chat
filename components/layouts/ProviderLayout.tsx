@@ -2,6 +2,7 @@
 import axios from "axios";
 import getIO from "@/lib/socket-io";
 import CreateUser from "../CreateUser";
+import { axiosApp } from "@/lib/utils";
 import Sider from "antd/es/layout/Sider";
 import { UsuarioChat } from "@/types/UsuariosChat";
 import { Menu, Layout, Avatar, Badge } from "antd";
@@ -51,8 +52,8 @@ const ProviderLayout: FC<PropsWithChildren> = (props) => {
     getUserLocalStorage();
     const getUsersOnline = async () => {
       try {
-        const response = await axios.get<{ data: UsuarioChat[] }>(
-          "/api/usuarios-chat"
+        const response = await axiosApp.get<{ data: UsuarioChat[] }>(
+          "/v1/usuarios-chat"
         );
         setUsersOnline(response.data?.data || []);
       } catch (error) {
