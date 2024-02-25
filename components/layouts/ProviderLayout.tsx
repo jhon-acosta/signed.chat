@@ -53,7 +53,7 @@ const ProviderLayout: FC<PropsWithChildren> = (props) => {
     const getUsersOnline = async () => {
       try {
         const response = await axiosApp.get<{ data: UsuarioChat[] }>(
-          "/v1/usuarios-chat"
+          "/v1/publico/usuarios"
         );
         setUsersOnline(response.data?.data || []);
       } catch (error) {
@@ -64,7 +64,8 @@ const ProviderLayout: FC<PropsWithChildren> = (props) => {
     getUsersOnline();
 
     const io = getIO();
-    io.on("getAllUsers", (users: UsuarioChat[]) => {
+    io.on("usuarios-online", (users: UsuarioChat[]) => {
+      console.log("users", users);
       setUsersOnline(users);
       setTimeout(() => {
         getUserLocalStorage();
