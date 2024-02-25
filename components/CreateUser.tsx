@@ -1,8 +1,11 @@
-import { useState } from "react";
+
+
+import { useState, useEffect } from "react";
 import { axiosApp } from "@/lib/utils";
 import { SendOutlined } from "@ant-design/icons";
 import { UsuarioChat } from "@/types/UsuariosChat";
 import { Avatar, Button, Card, Form, Input, Select, message } from "antd";
+import getIO from "@/lib/socket-io";
 
 const avatars = [
   "https://d2u8k2ocievbld.cloudfront.net/memojis/male/1.png",
@@ -29,7 +32,26 @@ const avatars = [
 
 const CreateUser = () => {
   const [form] = Form.useForm<UsuarioChat>();
-  const [isLoading, setIsLoading] = useState(false);
+  const [isLoading, setIsLoading] = useState(true);
+  const [isSocketConnected, setIsSocketConnected] = useState(false); // Estado para controlar la conexión del socket
+  const loadingImage = "loading.gif";
+
+  useEffect(() => {
+    const socket = getIO(); // Obtener el socket
+    socket.on("connect", () => {
+      console.log("Connected to socket");
+      setIsSocketConnected(true); // Cambiar el estado cuando se conecte el socket
+      setIsLoading(false); // Cambiar el estado de carga a falso
+    });
+    socket.on("disconnect", () => {
+      console.log("Disconnected from socket");
+      setIsSocketConnected(false); // Cambiar el estado cuando se desconecte el socket
+    });
+
+    return () => {
+      socket.disconnect(); // Desconectar el socket al desmontar el componente
+    };
+  }, []);
 
   const onSubmit = async (values: UsuarioChat) => {
     setIsLoading(true);
@@ -52,57 +74,63 @@ const CreateUser = () => {
 
   return (
     <div className="flex justify-center items-center w-full">
-      <Card title="Genera un usuario" className="w-96">
-        <Form
-          form={form}
-          initialValues={{
-            username: "",
-            avatar: avatars[0],
-          }}
-          layout="horizontal"
-          wrapperCol={{ sm: 16 }}
-          labelCol={{ span: 6 }}
-          autoComplete="off"
-          onFinish={onSubmit}
-          disabled={isLoading}
-        >
-          <Form.Item
-            label="Usuario"
-            name="username"
-            rules={[{ required: true, message: "Ingresa un usuario" }]}
-            normalize={(value: string) => value.toLocaleLowerCase()?.trim()}
+      {isLoading ? ( // Mostrar GIF de carga mientras se conecta al socket
+        <div>
+         <img src={loadingImage} alt="Cargando..." />
+      </div>
+      ) : (
+        <Card title="Genera un usuario" className="w-96">
+          <Form
+            form={form}
+            initialValues={{
+              username: "",
+              avatar: avatars[0],
+            }}
+            layout="horizontal"
+            wrapperCol={{ sm: 16 }}
+            labelCol={{ span: 6 }}
+            autoComplete="off"
+            onFinish={onSubmit}
+            disabled={!isSocketConnected} // Deshabilitar el formulario si el socket no está conectado
           >
-            <Input placeholder="Ingresa un usuario" />
-          </Form.Item>
-          <Form.Item
-            label="Avatar"
-            name="avatar"
-            rules={[{ required: true, message: "Selecciona un avatar" }]}
-          >
-            <Select
-              className="w-10"
-              options={avatars.map((avatar, index) => ({
-                label: (
-                  <>
-                    {index + 1}: <Avatar src={avatar} />
-                  </>
-                ),
-                value: avatar,
-              }))}
-            />
-          </Form.Item>
-          <div className="flex justify-center items-center">
-            <Button
-              type="primary"
-              htmlType="submit"
-              icon={<SendOutlined />}
-              loading={isLoading}
+            <Form.Item
+              label="Usuario"
+              name="username"
+              rules={[{ required: true, message: "Ingresa un usuario" }]}
+              normalize={(value: string) => value.toLocaleLowerCase()?.trim()}
             >
-              Comenzar chat
-            </Button>
-          </div>
-        </Form>
-      </Card>
+              <Input placeholder="Ingresa un usuario" />
+            </Form.Item>
+            <Form.Item
+              label="Avatar"
+              name="avatar"
+              rules={[{ required: true, message: "Selecciona un avatar" }]}
+            >
+              <Select
+                className="w-10"
+                options={avatars.map((avatar, index) => ({
+                  label: (
+                    <>
+                      {index + 1}: <Avatar src={avatar} />
+                    </>
+                  ),
+                  value: avatar,
+                }))}
+              />
+            </Form.Item>
+            <div className="flex justify-center items-center">
+              <Button
+                type="primary"
+                htmlType="submit"
+                icon={<SendOutlined />}
+                loading={isLoading}
+              >
+                Comenzar chat
+              </Button>
+            </div>
+          </Form>
+        </Card>
+      )}
     </div>
   );
 };
