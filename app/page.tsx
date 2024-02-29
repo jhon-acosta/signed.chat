@@ -1,9 +1,3 @@
-import SignedChat from "@/components/SignedChat";
-
-export default function Home() {
-  return (
-    <main>
-      <SignedChat />
-    </main>
-  );
+export default function Home(props: React.PropsWithChildren<{}>) {
+  return <main>{props.children}</main>;
 }
