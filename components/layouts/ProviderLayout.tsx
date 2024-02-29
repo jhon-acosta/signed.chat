@@ -3,15 +3,14 @@ import getIO from "@/lib/socket-io";
 import ChatPage from "../SignedChat";
 import CreateUser from "../CreateUser";
 import Sider from "antd/es/layout/Sider";
-import { Socket } from "socket.io-client";
-import { UsuarioChat } from "@/types/UsuariosChat";
 import { Menu, Layout, Avatar, Badge } from "antd";
+import { Chat, UsuarioChat } from "@/types/UsuariosChat";
 import { axiosApp, getUsuarioLocalStg } from "@/lib/utils";
 import { ItemType, MenuItemType } from "antd/es/menu/hooks/useItems";
 import { FC, useMemo, useState, useEffect, PropsWithChildren } from "react";
 
 const ProviderLayout: FC<PropsWithChildren> = (props) => {
-  const [io, setIO] = useState<Socket>();
+  const [chats, setChats] = useState<Chat[]>([]);
   const [currentUser, setCurrentUser] = useState<UsuarioChat>();
   const [receiverUser, setReceiverUser] = useState<UsuarioChat>();
   const [usersOnline, setUsersOnline] = useState<UsuarioChat[]>([]);
@@ -59,8 +58,19 @@ const ProviderLayout: FC<PropsWithChildren> = (props) => {
     };
     getUsersOnline();
 
+    const getChatsRealTime = async () => {
+      try {
+        const response = await axiosApp.get<Chat[]>(
+          "/v1/publico/usuarios/chats-realtime"
+        );
+        setChats(response?.data || []);
+      } catch (error) {
+        console.error("Error:", error);
+      }
+    };
+    getChatsRealTime();
+
     const io = getIO();
-    setIO(io);
     io.on("usuarios-online", (users: UsuarioChat[]) => {
       if (users.length > 2) setReceiverUser(users[1]);
       setUsersOnline(users);
@@ -68,6 +78,11 @@ const ProviderLayout: FC<PropsWithChildren> = (props) => {
         setCurrentUser(getUsuarioLocalStg());
       }, 100);
     });
+
+    io.on("chats-realtime", (data: Array<Chat>) => {
+      setChats(data);
+    });
+
     return () => {
       io.disconnect();
     };
@@ -75,7 +90,7 @@ const ProviderLayout: FC<PropsWithChildren> = (props) => {
 
   return (
     <Layout className="!min-h-screen bg-[#0c1317]">
-      <Layout.Content className="flex px-5 md:px-40 md:py-20 rounded-3xl ">
+      <Layout.Content className="flex px-5 md:px-40 md:py-20 rounded-3xl">
         {!currentUser ? (
           <CreateUser />
         ) : (
@@ -96,7 +111,7 @@ const ProviderLayout: FC<PropsWithChildren> = (props) => {
             </Sider>
             <Layout.Content className="bg-[#202b30] ">
               <ChatPage
-                io={io}
+                chats={chats}
                 currentUser={currentUser}
                 receiverUser={receiverUser}
               />
