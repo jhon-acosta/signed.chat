@@ -2,7 +2,17 @@ import { useEffect, useState } from "react";
 import { axiosApp } from "@/lib/utils";
 import { SendOutlined, UploadOutlined } from "@ant-design/icons";
 import { UsuarioChat } from "@/types/UsuariosChat";
-import { Avatar, Button, Card, Form, Input, Select, Upload, message } from "antd";
+import {
+  Avatar,
+  Button,
+  Card,
+  Form,
+  Input,
+  Select,
+  Upload,
+  UploadFile,
+  message,
+} from "antd";
 import getIO from "@/lib/socket-io";
 
 const avatars = [
@@ -30,8 +40,14 @@ const avatars = [
 
 // ... (import statements)
 
+interface UsuarioCustom extends Omit<UsuarioChat, "privateKey"> {
+  privateKey: {
+    originFileObj: File;
+  }[];
+}
+
 const CreateUser = () => {
-  const [form] = Form.useForm<UsuarioChat>();
+  const [form] = Form.useForm<UsuarioCustom>();
   const [isLoading, setIsLoading] = useState(false);
   const [userExists, setUserExists] = useState(false);
   const loadingImage = "loading.gif";
@@ -54,7 +70,7 @@ const CreateUser = () => {
     };
   }, []);
 
-  const onSubmit = async (values: UsuarioChat) => {
+  const onSubmit = async (values: UsuarioCustom) => {
     setIsLoading(true);
     try {
       const response = await axiosApp.post<UsuarioChat>(
@@ -65,7 +81,6 @@ const CreateUser = () => {
       localStorage.setItem("currentUser", JSON.stringify(response.data));
       message.success("Usuario nuevo creado. Bienvenido al chat.");
 
-     
       message.success(`Usuario creado correctamente`);
     } catch (error) {
       console.error(error);
@@ -77,7 +92,9 @@ const CreateUser = () => {
         setUserExists(true);
 
         // Mostrar mensaje solo si es un usuario existente
-        message.warning("Usuario ya existe. Carga la clave privada para reanudar.");
+        message.warning(
+          "Usuario ya existe. Carga la clave privada para reanudar."
+        );
       } else {
         message.error("Error al crear el usuario.");
       }
@@ -86,7 +103,7 @@ const CreateUser = () => {
     }
   };
 
-  const onSubmit2 = async (values: UsuarioChat) => {
+  const onSubmit2 = async (values: UsuarioCustom) => {
     setIsLoading(true);
 
     try {
@@ -94,14 +111,12 @@ const CreateUser = () => {
       console.log(values.privateKey);
       const formData = new FormData();
 
-      if (values.privateKey && values.privateKey.originFileObj) {
-        formData.append('file', values.privateKey.originFileObj);
-      } else {
-        // Si no está presente o no tiene originFileObj,
-        console.error("Error: values.privateKey no es válido o está ausente");
-       
-      }
-      const response = await axiosApp.post(`/v1/publico/usuarios/${values.username}/reanudar-chat`, formData);
+      formData.append("file", values.privateKey[0].originFileObj);
+
+      const response = await axiosApp.post(
+        `/v1/publico/usuarios/${values.username}/reanudar-chat`,
+        formData
+      );
 
       console.log("POST Response:", response);
 
@@ -146,7 +161,8 @@ const CreateUser = () => {
               normalize={(value: string) => value.toLocaleLowerCase()?.trim()}
             >
               <Input placeholder="Ingresa un usuario" />
-            </Form.Item><Form.Item
+            </Form.Item>
+            <Form.Item
               label="Carga Clave Privada"
               name="privateKey"
               valuePropName="fileList"
@@ -234,6 +250,3 @@ const CreateUser = () => {
 };
 
 export default CreateUser;
-
-
-

@@ -4,10 +4,7 @@ export interface UsuarioChat {
   avatar: string;
   estado?: "online" | "offline";
   publicKey?: string;
-  privateKey?: {
-    originFileObj?: Blob;
-    
-  };
+  privateKey?: string;
 }
 
 export interface Chat {
