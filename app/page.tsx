@@ -1,9 +1,5 @@
-import SignedChat from "@/components/SignedChat";
+const Page = () => {
+  return <div>Page</div>;
+};
 
-export default function Home() {
-  return (
-    <main>
-      <SignedChat />
-    </main>
-  );
-}
+export default Page;

@@ -65,10 +65,8 @@ const CreateUser = () => {
       localStorage.setItem("currentUser", JSON.stringify(response.data));
       message.success("Usuario nuevo creado. Bienvenido al chat.");
 
-      await axiosApp.post(`/v1/publico/usuarios/${response.data._id}/estado`, {
-        estado: "online",
-      });
-
+     
+      message.success(`Usuario creado correctamente`);
     } catch (error) {
       console.error(error);
       const existingUserResponse = await axiosApp.get<UsuarioChat[]>(
