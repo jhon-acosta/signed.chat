@@ -3,12 +3,15 @@ import { axiosApp } from "@/lib/utils";
 import { SendOutlined, UploadOutlined } from "@ant-design/icons";
 import { UsuarioChat } from "@/types/UsuariosChat";
 import {
+  Alert,
   Avatar,
   Button,
   Card,
+  Flex,
   Form,
   Input,
   Select,
+  Spin,
   Upload,
   UploadFile,
   message,
@@ -38,8 +41,6 @@ const avatars = [
   "https://d2u8k2ocievbld.cloudfront.net/memojis/female/12.png",
 ];
 
-// ... (import statements)
-
 interface UsuarioCustom extends Omit<UsuarioChat, "privateKey"> {
   privateKey: {
     originFileObj: File;
@@ -50,23 +51,21 @@ const CreateUser = () => {
   const [form] = Form.useForm<UsuarioCustom>();
   const [isLoading, setIsLoading] = useState(false);
   const [userExists, setUserExists] = useState(false);
-  const loadingImage = "loading.gif";
-  const [isSocketConnected, setIsSocketConnected] = useState(false);
+  const [isSocketConnecting, setIsSocketConnecting] = useState(true); // Nuevo estado para la conexión del socket
 
   useEffect(() => {
-    const socket = getIO();
+    const socket = getIO(); // Obtener el socket
     socket.on("connect", () => {
       console.log("Connected to socket");
-      setIsSocketConnected(true);
-      setIsLoading(false);
+      setIsSocketConnecting(false); // Cambiar el estado cuando se conecte el socket
     });
     socket.on("disconnect", () => {
       console.log("Disconnected from socket");
-      setIsSocketConnected(false);
+      setIsSocketConnecting(true); // Cambiar el estado cuando se desconecte el socket
     });
 
     return () => {
-      socket.disconnect();
+      socket.disconnect(); // Desconectar el socket al desmontar el componente
     };
   }, []);
 
@@ -79,8 +78,6 @@ const CreateUser = () => {
       );
 
       localStorage.setItem("currentUser", JSON.stringify(response.data));
-      message.success("Usuario nuevo creado. Bienvenido al chat.");
-
       message.success(`Usuario creado correctamente`);
     } catch (error) {
       console.error(error);
@@ -107,10 +104,7 @@ const CreateUser = () => {
     setIsLoading(true);
 
     try {
-      // Realizar POST con la clave privada
-      console.log(values.privateKey);
       const formData = new FormData();
-
       formData.append("file", values.privateKey[0].originFileObj);
 
       const response = await axiosApp.post(
@@ -118,19 +112,16 @@ const CreateUser = () => {
         formData
       );
 
-      console.log("POST Response:", response);
+      localStorage.setItem("currentUser", JSON.stringify(response.data));
 
-      // Verificar si el servidor confirma la coincidencia
-      if (response.data.success) {
-        localStorage.setItem("currentUser", JSON.stringify(response.data.data));
-        message.success("Chat reanudado. Bienvenido de nuevo.");
-      } else {
-        // Si el servidor no confirma la coincidencia, mostrar mensaje de error
-        message.error("Error: La clave privada no coincide con la registrada.");
-      }
+      // Realizar un refresh de la página después de completar la operación
+      window.location.reload();
     } catch (error) {
-      console.error(error);
-      message.error("Error al reanudar el chat.");
+      // Manejar errores, por ejemplo, problemas de red
+      console.error("Error al procesar la solicitud:", error);
+
+      // Mostrar un mensaje de error si la carga de la clave privada falla
+      message.error("Se produjo un error al cargar la clave privada.");
     } finally {
       setIsLoading(false);
     }
@@ -138,7 +129,28 @@ const CreateUser = () => {
 
   return (
     <div className="flex justify-center items-center w-full">
-      {userExists ? (
+      {isSocketConnecting ? ( // Mostrar mensaje de carga mientras se conecta al socket
+        <Flex
+          gap="small"
+          vertical
+          style={{
+            backgroundColor: "white",
+            padding: "70px",
+            borderRadius: "40px",
+            alignItems: "center",
+            justifyContent: "center",
+          }}
+        >
+          <Flex gap="small" align="center">
+            <Spin size="large">
+              <div className="content" />
+            </Spin>
+          </Flex>
+          <div className="content" style={{ marginTop: "20px" }}>
+            Loading...
+          </div>
+        </Flex>
+      ) : userExists ? (
         // Mostrar el Card de Usuario Ya Existe
         <Card title="Usuario ya Existe" className="w-96">
           <Form
