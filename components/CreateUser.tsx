@@ -40,9 +40,6 @@ const CreateUser = () => {
       );
       localStorage.setItem("currentUser", JSON.stringify(response.data));
       message.success(`Usuario creado correctamente`);
-      await axiosApp.post(`/v1/publico/usuarios/${response.data._id}/estado`, {
-        estado: "online",
-      });
     } catch (error) {
       console.error(error);
     } finally {
