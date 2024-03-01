@@ -3,6 +3,8 @@ import getIO from "@/lib/socket-io";
 import ChatPage from "../SignedChat";
 import CreateUser from "../CreateUser";
 import Sider from "antd/es/layout/Sider";
+import CerrarSesion from "../CerrarSesion";
+import DescargarClaves from "../DescargarClaves";
 import { Menu, Layout, Avatar, Badge } from "antd";
 import { Chat, UsuarioChat } from "@/types/UsuariosChat";
 import { axiosApp, getUsuarioLocalStg } from "@/lib/utils";
@@ -29,7 +31,20 @@ const ProviderLayout: FC<PropsWithChildren> = (props) => {
           key: currentUser._id,
           icon: <Avatar src={currentUser.avatar} />,
           label: `${currentUser.username} (Tú)`,
-          disabled: !!currentUser,
+          children: [
+            {
+              key: "descargar-privada",
+              label: <DescargarClaves id={currentUser._id} tipo="privada" />,
+            },
+            {
+              key: "descargar-publica",
+              label: <DescargarClaves id={currentUser._id} tipo="publica" />,
+            },
+            {
+              key: "cerrar-sesion",
+              label: <CerrarSesion id={currentUser._id} />,
+            },
+          ],
         } as never,
         {
           key: "en-linea",
@@ -42,40 +57,40 @@ const ProviderLayout: FC<PropsWithChildren> = (props) => {
     return data;
   }, [currentUser, usersOnline]);
 
+  const getUsersOnline = async () => {
+    try {
+      const response = await axiosApp.get<UsuarioChat[]>(
+        "/v1/publico/usuarios"
+      );
+      setUsersOnline(response?.data || []);
+      if (response?.data.length > 2) setReceiverUser(response?.data[0]);
+    } catch (error) {
+      console.error("Error:", error);
+    }
+  };
+
+  const getChatsRealTime = async () => {
+    try {
+      const response = await axiosApp.get<Chat[]>(
+        "/v1/publico/usuarios/chats-realtime"
+      );
+      setChats(response?.data || []);
+    } catch (error) {
+      console.error("Error:", error);
+    }
+  };
+
   useEffect(() => {
-    setCurrentUser(getUsuarioLocalStg());
+    setCurrentUser(getUsuarioLocalStg()!);
 
-    const getUsersOnline = async () => {
-      try {
-        const response = await axiosApp.get<UsuarioChat[]>(
-          "/v1/publico/usuarios"
-        );
-        setUsersOnline(response?.data || []);
-        if (response?.data.length > 2) setReceiverUser(response?.data[0]);
-      } catch (error) {
-        console.error("Error:", error);
-      }
-    };
-    getUsersOnline();
-
-    const getChatsRealTime = async () => {
-      try {
-        const response = await axiosApp.get<Chat[]>(
-          "/v1/publico/usuarios/chats-realtime"
-        );
-        setChats(response?.data || []);
-      } catch (error) {
-        console.error("Error:", error);
-      }
-    };
-    getChatsRealTime();
+    Promise.all([getUsersOnline(), getChatsRealTime()]);
 
     const io = getIO();
     io.on("usuarios-online", (users: UsuarioChat[]) => {
       if (users.length > 2) setReceiverUser(users[1]);
       setUsersOnline(users);
       setTimeout(() => {
-        setCurrentUser(getUsuarioLocalStg());
+        setCurrentUser(getUsuarioLocalStg()!);
       }, 100);
     });
 
@@ -97,7 +112,7 @@ const ProviderLayout: FC<PropsWithChildren> = (props) => {
           <>
             <Sider width={200} breakpoint="lg" collapsedWidth="0">
               <Menu
-                mode="inline"
+                mode="vertical"
                 theme="dark"
                 items={items}
                 style={{ height: "100%" }}

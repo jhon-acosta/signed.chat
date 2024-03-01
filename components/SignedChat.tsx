@@ -1,9 +1,9 @@
 "use client";
 import { FC, useEffect, useMemo, useState } from "react";
-import { LockOutlined, SendOutlined } from "@ant-design/icons";
 import { Avatar, Button, Input, Typography, message } from "antd";
 import { Chat, ChatVista, UsuarioChat } from "@/types/UsuariosChat";
 import { axiosApp, desencriptarMensaje, encriptarMensaje } from "@/lib/utils";
+import { LockOutlined, MessageOutlined, SendOutlined } from "@ant-design/icons";
 
 const Mensaje: FC<{
   chat: ChatVista;
@@ -117,14 +117,14 @@ const ChatPage: FC<{
       <div className="h-full">
         <div className="flex h-14 items-center px-2">
           {!props.receiverUser ? (
-            <Typography.Text className="text-white">
-              Selecciona un usuario
+            <Typography.Text className="text-white" strong>
+              Selecciona un usuario con quien chatear <MessageOutlined />
             </Typography.Text>
           ) : (
             <div>
               <Avatar src={props.receiverUser?.avatar} />
               <Typography.Text className="ml-2 text-gray-200">
-                {props.receiverUser?.username}
+                @{props.receiverUser?.username}
               </Typography.Text>
             </div>
           )}
@@ -135,22 +135,20 @@ const ChatPage: FC<{
           ))}
         </div>
 
-        {props.receiverUser ? (
-          <div className="bg-[#202c35] flex h-16 items-center justify-center">
-            <Input
-              value={mensaje}
-              placeholder="Escribe un mensaje"
-              onChange={(e) => setMensaje(e.target.value)}
-              maxLength={120}
-            />
-            <Button
-              icon={<SendOutlined />}
-              type="link"
-              onClick={enviarMensaje}
-              loading={loadingMensaje}
-            />
-          </div>
-        ) : null}
+        <div className="bg-[#202c35] flex h-16 items-center justify-center">
+          <Input
+            value={mensaje}
+            placeholder="Escribe un mensaje"
+            onChange={(e) => setMensaje(e.target.value)}
+            maxLength={120}
+          />
+          <Button
+            icon={<SendOutlined />}
+            type="link"
+            onClick={enviarMensaje}
+            loading={loadingMensaje}
+          />
+        </div>
       </div>
     </div>
   );

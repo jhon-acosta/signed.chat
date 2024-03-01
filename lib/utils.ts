@@ -1,3 +1,4 @@
+import { UsuarioChat } from "@/types/UsuariosChat";
 import axios from "axios";
 import crypto from "crypto";
 
@@ -5,7 +6,7 @@ export const axiosApp = axios.create({
   baseURL: process.env.NEXT_PUBLIC_API,
 });
 
-export const getUsuarioLocalStg = () => {
+export const getUsuarioLocalStg = (): UsuarioChat | null => {
   const usuario = localStorage.getItem("currentUser");
   return usuario ? JSON.parse(usuario) : null;
 };
