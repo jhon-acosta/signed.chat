@@ -115,7 +115,7 @@ const CreateUser = () => {
       localStorage.setItem("currentUser", JSON.stringify(response.data));
 
       // Realizar un refresh de la página después de completar la operación
-      window.location.reload();
+      // window.location.reload();
     } catch (error) {
       // Manejar errores, por ejemplo, problemas de red
       console.error("Error al procesar la solicitud:", error);
@@ -260,5 +260,4 @@ const CreateUser = () => {
     </div>
   );
 };
-
 export default CreateUser;
