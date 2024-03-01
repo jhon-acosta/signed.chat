@@ -56,11 +56,9 @@ const CreateUser = () => {
   useEffect(() => {
     const socket = getIO(); // Obtener el socket
     socket.on("connect", () => {
-      console.log("Connected to socket");
       setIsSocketConnecting(false); // Cambiar el estado cuando se conecte el socket
     });
     socket.on("disconnect", () => {
-      console.log("Disconnected from socket");
       setIsSocketConnecting(true); // Cambiar el estado cuando se desconecte el socket
     });
 
@@ -104,25 +102,23 @@ const CreateUser = () => {
     setIsLoading(true);
 
     try {
+      // Crear un objeto FormData para enviar el archivo de clave privada al servidor
       const formData = new FormData();
       formData.append("file", values.privateKey[0].originFileObj);
 
+      // Intentar enviar una solicitud POST para reanudar el chat con la clave privada proporcionada
       const response = await axiosApp.post(
         `/v1/publico/usuarios/${values.username}/reanudar-chat`,
         formData
       );
 
+      // Almacenar la información del usuario (actualizada) en el almacenamiento local
       localStorage.setItem("currentUser", JSON.stringify(response.data));
-
-      // Realizar un refresh de la página después de completar la operación
       // window.location.reload();
     } catch (error) {
-      // Manejar errores, por ejemplo, problemas de red
-      console.error("Error al procesar la solicitud:", error);
-
-      // Mostrar un mensaje de error si la carga de la clave privada falla
-      message.error("Se produjo un error al cargar la clave privada.");
+      message.error("Clave privada no valida");
     } finally {
+      // Independientemente del resultado (éxito o error), desactivar la carga
       setIsLoading(false);
     }
   };
@@ -152,7 +148,7 @@ const CreateUser = () => {
         </Flex>
       ) : userExists ? (
         // Mostrar el Card de Usuario Ya Existe
-        <Card title="Usuario ya Existe" className="w-96">
+        <Card title="El Usuario ya Existe." className="w-96">
           <Form
             form={form}
             initialValues={{
@@ -175,7 +171,7 @@ const CreateUser = () => {
               <Input placeholder="Ingresa un usuario" />
             </Form.Item>
             <Form.Item
-              label="Carga Clave Privada"
+              label="Clave: "
               name="privateKey"
               valuePropName="fileList"
               getValueFromEvent={(e: any) => e.fileList}
