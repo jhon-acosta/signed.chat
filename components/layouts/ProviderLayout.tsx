@@ -5,13 +5,14 @@ import CreateUser from "../CreateUser";
 import Sider from "antd/es/layout/Sider";
 import CerrarSesion from "../CerrarSesion";
 import DescargarClaves from "../DescargarClaves";
-import { Menu, Layout, Avatar, Badge } from "antd";
+import { Menu, Layout, Avatar, Badge, Spin } from "antd";
 import { Chat, UsuarioChat } from "@/types/UsuariosChat";
 import { axiosApp, getUsuarioLocalStg } from "@/lib/utils";
 import { ItemType, MenuItemType } from "antd/es/menu/hooks/useItems";
 import { FC, useMemo, useState, useEffect, PropsWithChildren } from "react";
 
 const ProviderLayout: FC<PropsWithChildren> = (props) => {
+  const [enLinea, setEnLinea] = useState(false);
   const [chats, setChats] = useState<Chat[]>([]);
   const [currentUser, setCurrentUser] = useState<UsuarioChat>();
   const [receiverUser, setReceiverUser] = useState<UsuarioChat>();
@@ -86,6 +87,19 @@ const ProviderLayout: FC<PropsWithChildren> = (props) => {
     Promise.all([getUsersOnline(), getChatsRealTime()]);
 
     const io = getIO();
+
+    io.on("connect", () => {
+      setEnLinea(true);
+    });
+
+    io.on("disconnect", () => {
+      setEnLinea(false);
+    });
+
+    io.on("connect_error", async (error) => {
+      setEnLinea(false);
+    });
+
     io.on("usuarios-online", (users: UsuarioChat[]) => {
       if (users.length > 2) setReceiverUser(users[1]);
       setUsersOnline(users);
@@ -104,37 +118,49 @@ const ProviderLayout: FC<PropsWithChildren> = (props) => {
   }, []);
 
   return (
-    <Layout className="!min-h-screen bg-[#0c1317]">
-      <Layout.Content className="flex px-5 md:px-40 md:py-20 rounded-3xl">
-        {!currentUser ? (
-          <CreateUser />
-        ) : (
-          <>
-            <Sider width={200} breakpoint="lg" collapsedWidth="0">
-              <Menu
-                mode="vertical"
-                theme="dark"
-                items={items}
-                style={{ height: "100%" }}
-                className="bg-[#202c35]"
-                onSelect={(seleccionado) => {
-                  setReceiverUser(
-                    usersOnline.find((user) => user._id === seleccionado.key)
-                  );
-                }}
-              />
-            </Sider>
-            <Layout.Content className="bg-[#202b30] ">
-              <ChatPage
-                chats={chats}
-                currentUser={currentUser}
-                receiverUser={receiverUser}
-              />
-            </Layout.Content>
-          </>
-        )}
-      </Layout.Content>
-    </Layout>
+    <>
+      {enLinea ? (
+        <Layout className="!min-h-screen bg-[#0c1317]">
+          <Layout.Content className="flex px-5 md:px-40 md:py-20 rounded-3xl">
+            {!currentUser ? (
+              <CreateUser />
+            ) : (
+              <>
+                <Sider width={200} breakpoint="lg" collapsedWidth="0">
+                  <Menu
+                    mode="vertical"
+                    theme="dark"
+                    items={items}
+                    style={{ height: "100%" }}
+                    className="bg-[#202c35]"
+                    onSelect={(seleccionado) => {
+                      setReceiverUser(
+                        usersOnline.find(
+                          (user) => user._id === seleccionado.key
+                        )
+                      );
+                    }}
+                  />
+                </Sider>
+                <Layout.Content className="bg-[#202b30] ">
+                  <ChatPage
+                    chats={chats}
+                    currentUser={currentUser}
+                    receiverUser={receiverUser}
+                  />
+                </Layout.Content>
+              </>
+            )}
+          </Layout.Content>
+        </Layout>
+      ) : (
+        <div className="flex items-center justify-center min-h-screen">
+          <Spin size="large" spinning className="flex items-center">
+            Conectando a la sala de chat...
+          </Spin>
+        </div>
+      )}
+    </>
   );
 };
 

@@ -1,22 +1,17 @@
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { axiosApp } from "@/lib/utils";
-import { SendOutlined, UploadOutlined } from "@ant-design/icons";
 import { UsuarioChat } from "@/types/UsuariosChat";
+import { SendOutlined, UploadOutlined } from "@ant-design/icons";
 import {
-  Alert,
-  Avatar,
-  Button,
   Card,
-  Flex,
   Form,
   Input,
+  Avatar,
   Select,
-  Spin,
+  Button,
   Upload,
-  UploadFile,
   message,
 } from "antd";
-import getIO from "@/lib/socket-io";
 
 const avatars = [
   "https://d2u8k2ocievbld.cloudfront.net/memojis/male/1.png",
@@ -42,187 +37,92 @@ const avatars = [
 ];
 
 interface UsuarioCustom extends Omit<UsuarioChat, "privateKey"> {
-  privateKey: {
-    originFileObj: File;
-  }[];
+  privateKey: { file: File };
 }
 
 const CreateUser = () => {
   const [form] = Form.useForm<UsuarioCustom>();
   const [isLoading, setIsLoading] = useState(false);
-  const [userExists, setUserExists] = useState(false);
-  const [isSocketConnecting, setIsSocketConnecting] = useState(true); // Nuevo estado para la conexión del socket
-
-  useEffect(() => {
-    const socket = getIO(); // Obtener el socket
-    socket.on("connect", () => {
-      setIsSocketConnecting(false); // Cambiar el estado cuando se conecte el socket
-    });
-    socket.on("disconnect", () => {
-      setIsSocketConnecting(true); // Cambiar el estado cuando se desconecte el socket
-    });
-
-    return () => {
-      socket.disconnect(); // Desconectar el socket al desmontar el componente
-    };
-  }, []);
+  const [usuarioExistente, setUsuarioExistente] = useState(false);
 
   const onSubmit = async (values: UsuarioCustom) => {
-    setIsLoading(true);
     try {
-      const response = await axiosApp.post<UsuarioChat>(
-        "/v1/publico/usuarios",
-        values
-      );
-
-      localStorage.setItem("currentUser", JSON.stringify(response.data));
-      message.success(`Usuario creado correctamente`);
+      setIsLoading(true);
+      let data;
+      if (usuarioExistente) {
+        const formData = new FormData();
+        formData.append("file", values.privateKey.file);
+        const response = await axiosApp.post(
+          `/v1/publico/usuarios/${values.username}/reanudar-chat`,
+          formData
+        );
+        data = response.data;
+        message.success(`Sesion reanudada correctamente.`);
+      } else {
+        const response = await axiosApp.post<UsuarioChat>(
+          "/v1/publico/usuarios",
+          values
+        );
+        data = response.data;
+        message.success(`Usuario creado correctamente`);
+      }
+      localStorage.setItem("currentUser", JSON.stringify(data));
     } catch (error) {
       console.error(error);
-      const existingUserResponse = await axiosApp.get<UsuarioChat[]>(
-        `/v1/publico/usuarios?username=${values.username}`
-      );
-
-      if (existingUserResponse.data.length > 0) {
-        setUserExists(true);
-
-        // Mostrar mensaje solo si es un usuario existente
-        message.error(
-          "Usuario ya existe. Carga la clave privada para reanudar."
-        );
-      } else {
-        message.error("Error al crear el usuario.");
-      }
+      setUsuarioExistente(true);
+      message.warning((error as any)?.response?.data);
     } finally {
-      setIsLoading(false);
-    }
-  };
-
-  const onSubmit2 = async (values: UsuarioCustom) => {
-    setIsLoading(true);
-
-    try {
-      // Crear un objeto FormData para enviar el archivo de clave privada al servidor
-      const formData = new FormData();
-      formData.append("file", values.privateKey[0].originFileObj);
-
-      // Intentar enviar una solicitud POST para reanudar el chat con la clave privada proporcionada
-      const response = await axiosApp.post(
-        `/v1/publico/usuarios/${values.username}/reanudar-chat`,
-        formData
-      );
-
-      // Almacenar la información del usuario (actualizada) en el almacenamiento local
-      localStorage.setItem("currentUser", JSON.stringify(response.data));
-      // window.location.reload();
-    } catch (error) {
-      message.error("Clave privada no valida");
-    } finally {
-      // Independientemente del resultado (éxito o error), desactivar la carga
       setIsLoading(false);
     }
   };
 
   return (
     <div className="flex justify-center items-center w-full">
-      {isSocketConnecting ? ( // Mostrar mensaje de carga mientras se conecta al socket
-        <Flex
-          gap="small"
-          vertical
-          style={{
-            backgroundColor: "white",
-            padding: "70px",
-            borderRadius: "40px",
-            alignItems: "center",
-            justifyContent: "center",
+      <Card title="Genera un usuario" className="w-96">
+        <Form
+          form={form}
+          initialValues={{
+            username: "",
+            avatar: avatars[0],
           }}
+          layout="horizontal"
+          wrapperCol={{ sm: 14 }}
+          labelCol={{ span: 8 }}
+          autoComplete="off"
+          onFinish={onSubmit}
+          disabled={isLoading}
         >
-          <Flex gap="small" align="center">
-            <Spin size="large">
-              <div className="content" />
-            </Spin>
-          </Flex>
-          <div className="content" style={{ marginTop: "20px" }}>
-            Loading...
-          </div>
-        </Flex>
-      ) : userExists ? (
-        // Mostrar el Card de Usuario Ya Existe
-        <Card title="El Usuario ya Existe." className="w-96">
-          <Form
-            form={form}
-            initialValues={{
-              username: "",
-              avatar: avatars[0],
-            }}
-            layout="horizontal"
-            wrapperCol={{ sm: 16 }}
-            labelCol={{ span: 6 }}
-            autoComplete="off"
-            onFinish={onSubmit2}
-            disabled={isLoading}
+          <Form.Item
+            label="Usuario"
+            name="username"
+            rules={[{ required: true, message: "Ingresa un usuario" }]}
+            normalize={(value: string) => value.toLocaleLowerCase()?.trim()}
           >
+            <Input placeholder="Ingresa un usuario" />
+          </Form.Item>
+          {usuarioExistente ? (
             <Form.Item
-              label="Usuario"
-              name="username"
-              rules={[{ required: false, message: "Ingresa un usuario" }]}
-              normalize={(value: string) => value.toLocaleLowerCase()?.trim()}
-            >
-              <Input placeholder="Ingresa un usuario" />
-            </Form.Item>
-            <Form.Item
-              label="Clave: "
+              label="Clave privada"
               name="privateKey"
-              valuePropName="fileList"
-              getValueFromEvent={(e: any) => e.fileList}
+              valuePropName="file"
               rules={[
                 {
                   required: true,
-                  message: "Carga tu archivo de clave privada (.pem)",
+                  message: "Carga tu clave privada (.pem)",
                 },
               ]}
             >
-              <Upload beforeUpload={() => false} accept=".pem">
+              <Upload
+                accept=".pem"
+                beforeUpload={(file) => {
+                  form.setFieldValue("privateKey", { file });
+                  return false;
+                }}
+              >
                 <Button icon={<UploadOutlined />}>Seleccionar archivo</Button>
               </Upload>
             </Form.Item>
-
-            <div className="flex justify-center items-center">
-              <Button
-                type="primary"
-                htmlType="submit"
-                icon={<SendOutlined />}
-                loading={isLoading}
-              >
-                Comenzar chat
-              </Button>
-            </div>
-          </Form>
-        </Card>
-      ) : (
-        // Mostrar el Card de Generar Usuario
-        <Card title="Genera un usuario" className="w-96">
-          <Form
-            form={form}
-            initialValues={{
-              username: "",
-              avatar: avatars[0],
-            }}
-            layout="horizontal"
-            wrapperCol={{ sm: 16 }}
-            labelCol={{ span: 6 }}
-            autoComplete="off"
-            onFinish={onSubmit}
-            disabled={isLoading}
-          >
-            <Form.Item
-              label="Usuario"
-              name="username"
-              rules={[{ required: true, message: "Ingresa un usuario" }]}
-              normalize={(value: string) => value.toLocaleLowerCase()?.trim()}
-            >
-              <Input placeholder="Ingresa un usuario" />
-            </Form.Item>
+          ) : (
             <Form.Item
               label="Avatar"
               name="avatar"
@@ -240,19 +140,20 @@ const CreateUser = () => {
                 }))}
               />
             </Form.Item>
-            <div className="flex justify-center items-center">
-              <Button
-                type="primary"
-                htmlType="submit"
-                icon={<SendOutlined />}
-                loading={isLoading}
-              >
-                Comenzar chat
-              </Button>
-            </div>
-          </Form>
-        </Card>
-      )}
+          )}
+          <div className="flex justify-center items-center">
+            <Button
+              type="primary"
+              htmlType="submit"
+              icon={<SendOutlined />}
+              loading={isLoading}
+            >
+              {usuarioExistente ? "Reanudar chat" : "Crear usuario"}
+            </Button>
+          </div>
+        </Form>
+      </Card>
+      {/* )} */}
     </div>
   );
 };
