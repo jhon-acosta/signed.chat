@@ -1,4 +1,4 @@
-import { io as socketIO } from "socket.io-client";
+import { Socket, io as socketIO } from "socket.io-client";
 
 const socketURL = `${
   process.env.NEXT_PUBLIC_SOCKET_URL?.includes("https://")
@@ -16,15 +16,15 @@ export default function getIO() {
   });
 
   io.on("connect", () => {
-    console.log("Connected");
+    console.log("[socket]: en línea");
   });
 
   io.on("disconnect", () => {
-    console.log("Disconnected");
+    console.log("[socket]: desconectado");
   });
 
-  io.on("connect_error", async (err) => {
-    console.log(`connect_error due to ${err.message}`);
+  io.on("connect_error", async (error) => {
+    console.log("[socket]: error de conexión", error);
   });
 
   return io;

@@ -1,25 +1,22 @@
 "use client";
-import axios from "axios";
 import getIO from "@/lib/socket-io";
+import ChatPage from "../SignedChat";
 import CreateUser from "../CreateUser";
-import { axiosApp } from "@/lib/utils";
 import Sider from "antd/es/layout/Sider";
-import { UsuarioChat } from "@/types/UsuariosChat";
-import { Menu, Layout, Avatar, Badge } from "antd";
+import CerrarSesion from "../CerrarSesion";
+import DescargarClaves from "../DescargarClaves";
+import { Menu, Layout, Avatar, Badge, Spin } from "antd";
+import { Chat, UsuarioChat } from "@/types/UsuariosChat";
+import { axiosApp, getUsuarioLocalStg } from "@/lib/utils";
 import { ItemType, MenuItemType } from "antd/es/menu/hooks/useItems";
 import { FC, useMemo, useState, useEffect, PropsWithChildren } from "react";
 
 const ProviderLayout: FC<PropsWithChildren> = (props) => {
+  const [enLinea, setEnLinea] = useState(false);
+  const [chats, setChats] = useState<Chat[]>([]);
+  const [currentUser, setCurrentUser] = useState<UsuarioChat>();
+  const [receiverUser, setReceiverUser] = useState<UsuarioChat>();
   const [usersOnline, setUsersOnline] = useState<UsuarioChat[]>([]);
-  const [receiverUser, setReceiverUser] = useState<string | null>(null);
-  const [currentUser, setCurrentUser] = useState<UsuarioChat | null>(null);
-
-  const getUserLocalStorage = () => {
-    const currentUser = localStorage.getItem("currentUser");
-    setCurrentUser(
-      !currentUser ? null : (JSON.parse(currentUser || "{}") as UsuarioChat)
-    );
-  };
 
   const items = useMemo((): ItemType<MenuItemType>[] => {
     const data = usersOnline
@@ -35,10 +32,23 @@ const ProviderLayout: FC<PropsWithChildren> = (props) => {
           key: currentUser._id,
           icon: <Avatar src={currentUser.avatar} />,
           label: `${currentUser.username} (Tú)`,
-          disabled: !!currentUser,
+          children: [
+            {
+              key: "descargar-privada",
+              label: <DescargarClaves id={currentUser._id} tipo="privada" />,
+            },
+            {
+              key: "descargar-publica",
+              label: <DescargarClaves id={currentUser._id} tipo="publica" />,
+            },
+            {
+              key: "cerrar-sesion",
+              label: <CerrarSesion id={currentUser._id} />,
+            },
+          ],
         } as never,
         {
-          key: currentUser._id,
+          key: "en-linea",
           icon: <Badge status={usersOnline.length > 0 ? "success" : "error"} />,
           label: `En línea (${usersOnline.length - 1})`,
           disabled: !!currentUser,
@@ -48,28 +58,58 @@ const ProviderLayout: FC<PropsWithChildren> = (props) => {
     return data;
   }, [currentUser, usersOnline]);
 
-  useEffect(() => {
-    getUserLocalStorage();
-    const getUsersOnline = async () => {
-      try {
-        const response = await axiosApp.get<{ data: UsuarioChat[] }>(
-          "/v1/publico/usuarios"
-        );
-        setUsersOnline(response.data?.data || []);
-      } catch (error) {
-        console.error("Error:", error);
-      }
-    };
+  const getUsersOnline = async () => {
+    try {
+      const response = await axiosApp.get<UsuarioChat[]>(
+        "/v1/publico/usuarios"
+      );
+      setUsersOnline(response?.data || []);
+      if (response?.data.length > 2) setReceiverUser(response?.data[0]);
+    } catch (error) {
+      console.error("Error:", error);
+    }
+  };
 
-    getUsersOnline();
+  const getChatsRealTime = async () => {
+    try {
+      const response = await axiosApp.get<Chat[]>(
+        "/v1/publico/usuarios/chats-realtime"
+      );
+      setChats(response?.data || []);
+    } catch (error) {
+      console.error("Error:", error);
+    }
+  };
+
+  useEffect(() => {
+    setCurrentUser(getUsuarioLocalStg()!);
+
+    Promise.all([getUsersOnline(), getChatsRealTime()]);
 
     const io = getIO();
+
+    io.on("connect", () => {
+      setEnLinea(true);
+    });
+
+    io.on("disconnect", () => {
+      setEnLinea(false);
+    });
+
+    io.on("connect_error", async (error) => {
+      setEnLinea(false);
+    });
+
     io.on("usuarios-online", (users: UsuarioChat[]) => {
-      console.log("users", users);
+      if (users.length > 2) setReceiverUser(users[1]);
       setUsersOnline(users);
       setTimeout(() => {
-        getUserLocalStorage();
+        setCurrentUser(getUsuarioLocalStg()!);
       }, 100);
+    });
+
+    io.on("chats-realtime", (data: Array<Chat>) => {
+      setChats(data);
     });
 
     return () => {
@@ -78,31 +118,49 @@ const ProviderLayout: FC<PropsWithChildren> = (props) => {
   }, []);
 
   return (
-    <Layout className="!min-h-screen bg-[#0c1317]">
-      <Layout.Content className="flex px-40 py-20 rounded-3xl ">
-        {!currentUser ? (
-          <CreateUser />
-        ) : (
-          <>
-            <Sider width={250}>
-              <Menu
-                mode="inline"
-                theme="dark"
-                items={items}
-                style={{ height: "100%" }}
-                className="bg-[#202c35]"
-                onSelect={({ key }) => {
-                  setReceiverUser(key);
-                }}
-              />
-            </Sider>
-            <Layout.Content className="bg-[#202c35] p-5">
-              {props.children}
-            </Layout.Content>
-          </>
-        )}
-      </Layout.Content>
-    </Layout>
+    <>
+      {enLinea ? (
+        <Layout className="!min-h-screen bg-[#0c1317]">
+          <Layout.Content className="flex px-5 md:px-40 md:py-20 rounded-3xl">
+            {!currentUser ? (
+              <CreateUser />
+            ) : (
+              <>
+                <Sider width={200} breakpoint="lg" collapsedWidth="0">
+                  <Menu
+                    mode="vertical"
+                    theme="dark"
+                    items={items}
+                    style={{ height: "100%" }}
+                    className="bg-[#202c35]"
+                    onSelect={(seleccionado) => {
+                      setReceiverUser(
+                        usersOnline.find(
+                          (user) => user._id === seleccionado.key
+                        )
+                      );
+                    }}
+                  />
+                </Sider>
+                <Layout.Content className="bg-[#202b30] ">
+                  <ChatPage
+                    chats={chats}
+                    currentUser={currentUser}
+                    receiverUser={receiverUser}
+                  />
+                </Layout.Content>
+              </>
+            )}
+          </Layout.Content>
+        </Layout>
+      ) : (
+        <div className="flex items-center justify-center min-h-screen">
+          <Spin size="large" spinning className="flex items-center">
+            Conectando a la sala de chat...
+          </Spin>
+        </div>
+      )}
+    </>
   );
 };
 
